@@ -1207,7 +1207,6 @@ select.input{
 // ═══════════════════════════════════
 // STATE
 // ═══════════════════════════════════
-let qrEtq=null, scanningEtq=false;
 let hist=JSON.parse(localStorage.getItem('pci_hist')||'[]');
 let etqs=JSON.parse(localStorage.getItem('pci_etqs')||'[]');
 let uuidAtual=null, ultimoQR=null, ntTimer=null;
@@ -1239,8 +1238,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 function fixScanHeight(){
-  // Make scanner square based on actual available width
-  const sb=document.getElementById('sbMain');
+  // Torna o viewfinder quadrado baseado na largura real
+  const sb=document.getElementById('camWrap');
   if(sb){ const w=sb.offsetWidth; if(w>0) sb.style.height=w+'px'; }
 }
 
@@ -1262,12 +1261,13 @@ function goPage(name){
 }
 
 function goSub(s){
-  ['nova','lista','extintor'].forEach(x=>{
-    document.getElementById('sp'+cap(x)).classList.remove('active');
-    document.getElementById('st'+cap(x)).classList.remove('active');
-  });
-  document.getElementById('sp'+cap(s)).classList.add('active');
-  document.getElementById('st'+cap(s)).classList.add('active');
+  // Mapa explícito de IDs — evita bugs com cap()
+  const spMap={nova:'spNova',lista:'spLista',extintor:'spExt'};
+  const stMap={nova:'stNova',lista:'stLista',extintor:'stExt'};
+  Object.values(spMap).forEach(id=>document.getElementById(id).classList.remove('active'));
+  Object.values(stMap).forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(spMap[s]) document.getElementById(spMap[s]).classList.add('active');
+  if(stMap[s]) document.getElementById(stMap[s]).classList.add('active');
   if(s!=='nova') stopScannerEtq();
   if(s==='lista') renderListaEtq();
 }
@@ -1276,11 +1276,11 @@ function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 // ═══════════════════════════════════════════════════════
 // CÂMERA NATIVA — Captura de imagem para IA
 // ═══════════════════════════════════════════════════════
-let camStream = null;        // stream da câmera principal
-let camStreamEtq = null;     // stream do scanner de etiqueta
-let qrEtq = null;            // Html5Qrcode para aba etiqueta
+let camStream = null;
+let camStreamEtq = null;
+let qrEtq = null;
 let scanningEtq = false;
-let flashTrack = null;       // track com torch para lanterna
+let flashTrack = null;
 
 // ── Iniciar câmera principal (modo IA) ──
 async function startCam(){
@@ -1438,16 +1438,7 @@ function extrairIDlocal(texto){
 
 // ── Motor de IA: Groq Vision (llama-3.2-11b-vision-preview) ──
 async function extrairIDcomIA(base64Jpeg){
-  const prompt = 'Analise esta imagem de um selo INMETRO (extintores de incêndio, Brasil, Portaria 314/2025).
-
-Busque por:
-1. Mensagem: "produto XXXX" → extraia o código após "produto"
-2. UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
-3. URL: https://napalmadamao.inmetro.gov.br/...
-4. Código alfanumérico impresso no selo
-
-Responda SOMENTE em JSON (sem markdown):
-{"encontrado":true,"id":"codigo-aqui","tipo":"UUID|MENSAGEM_WHATSAPP|URL_INMETRO|CODIGO_ALFANUMERICO","rawText":"texto visto na imagem","confianca":"alta|media|baixa","motivo":"se nao encontrado"}';
+  const prompt = `Analise esta imagem de um selo INMETRO (extintores de incendio, Brasil, Portaria 314/2025). Busque por: 1. Mensagem "produto XXXX" - extraia o codigo apos "produto". 2. UUID no formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars). 3. URL napalmadamao.inmetro.gov.br. 4. Codigo alfanumerico impresso. Responda SOMENTE em JSON sem markdown: {"encontrado":true,"id":"codigo-aqui","tipo":"UUID","rawText":"texto visto","confianca":"alta","motivo":"se nao encontrado"}`;
 
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
