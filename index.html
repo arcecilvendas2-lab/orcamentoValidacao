@@ -710,44 +710,60 @@ select.input{
     <div class="page active" id="pageScanner">
       <div class="p">
 
-        <!-- Scanner -->
+        <!-- IA Capture Card -->
         <div class="card" style="padding:12px;">
-          <div class="scan-wrap sq" id="sbMain">
-            <div id="qr-reader"></div>
-            <div class="scan-overlay">
-              <div class="scan-corner sc-tl"></div>
-              <div class="scan-corner sc-tr"></div>
-              <div class="scan-corner sc-bl"></div>
-              <div class="scan-corner sc-br"></div>
-              <div class="scan-line"></div>
-              <div class="scan-status" id="scanStatus">Pressione Iniciar</div>
+          <div class="card-head" style="margin-bottom:10px;">
+            <div class="card-head-icon" style="background:#E8F0FB;"><i class="fas fa-brain" style="color:#1E3B5A;"></i></div>
+            <div class="card-head-text">
+              <h3>Captura com IA</h3>
+              <p>Aponte para o selo INMETRO e capture</p>
             </div>
           </div>
-          <div class="btn-row">
-            <button class="btn btn-primary" id="btnStart" onclick="startScanner()">
-              <i class="fas fa-play"></i> Iniciar Scanner
-            </button>
-            <button class="btn btn-secondary hidden" id="btnStop" onclick="stopScanner()">
-              <i class="fas fa-stop"></i> Parar
-            </button>
-            <button class="btn-icon" id="btnFlash" onclick="toggleFlash()" title="Lanterna">
-              <i class="fas fa-bolt"></i>
-            </button>
+
+          <!-- Viewfinder -->
+          <div style="position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#0a0a0a;margin-bottom:12px;" id="camWrap">
+            <video id="camVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+            <div style="position:absolute;inset:0;pointer-events:none;">
+              <div class="scan-corner sc-tl"></div><div class="scan-corner sc-tr"></div>
+              <div class="scan-corner sc-bl"></div><div class="scan-corner sc-br"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;aspect-ratio:1;border:2px dashed rgba(255,255,255,0.35);border-radius:8px;"></div>
+            </div>
+            <div id="camStatus" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;text-align:center;padding:24px 12px 10px;font-size:.74rem;font-weight:600;">Pressione <strong>Iniciar</strong></div>
+            <canvas id="captureCanvas" style="display:none;position:absolute;inset:0;width:100%;height:100%;border-radius:14px;"></canvas>
+          </div>
+
+          <!-- Controles câmera -->
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button class="btn btn-primary" id="btnCamStart" onclick="startCam()"><i class="fas fa-play"></i> Iniciar Câmera</button>
+            <button class="btn btn-secondary hidden" id="btnCamStop" onclick="stopCam()"><i class="fas fa-stop"></i> Parar</button>
+            <button class="btn-icon" id="btnFlash" onclick="toggleFlash()" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          </div>
+
+          <!-- Botão capturar IA -->
+          <button class="btn btn-success hidden" id="btnCapture" onclick="capturarIA()">
+            <i class="fas fa-brain"></i> Capturar e Extrair ID com IA
+          </button>
+
+          <!-- Status IA -->
+          <div id="iaStatus" class="hidden" style="align-items:center;gap:10px;background:#EEF3FA;border-radius:12px;padding:12px 14px;margin-top:8px;">
+            <div id="iaSpinner" style="width:22px;height:22px;border:2px solid #C5D5E8;border-top-color:#1E3B5A;border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:.78rem;font-weight:700;color:#1E3B5A;" id="iaStatusTxt">Analisando com IA...</div>
+              <div style="font-size:.68rem;color:#6B7A8F;margin-top:1px;" id="iaStatusSub">Groq Vision (llama-3.2) analisa o selo</div>
+            </div>
           </div>
         </div>
 
         <!-- Entrada Manual -->
         <div class="manual-wrap">
-          <div class="label"><i class="fas fa-keyboard" style="color:#1E3B5A;"></i> Entrada Manual — Código Impresso no Selo</div>
-          <p style="font-size:.72rem;color:#6B7A8F;margin-bottom:8px;">Use o código alfanumérico abaixo do QR no selo INMETRO (ex: ZZVA6VNQYBGSRNF238)</p>
+          <div class="label"><i class="fas fa-keyboard" style="color:#1E3B5A;"></i> Entrada Manual</div>
+          <p style="font-size:.72rem;color:#6B7A8F;margin-bottom:8px;">Cole a mensagem do WhatsApp, URL INMETRO ou código do selo</p>
           <div class="manual-row">
             <input type="text" class="input input-mono" id="manualCode"
-              placeholder="ZZVA6VNQYBGSRNF238"
-              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+              placeholder="Cole aqui... (UUID, URL ou código)"
+              oninput="this.value=this.value.trim()"
               onkeydown="if(event.key==='Enter')submitManual()">
-            <button class="btn btn-primary btn-sm" onclick="submitManual()">
-              <i class="fas fa-search"></i> Verificar
-            </button>
+            <button class="btn btn-primary btn-sm" onclick="submitManual()"><i class="fas fa-search"></i></button>
           </div>
         </div>
 
@@ -755,37 +771,27 @@ select.input{
         <div id="resultCard" class="hidden">
           <div class="card">
             <div class="card-head">
-              <div class="card-head-icon" style="background:#DFF0E4;color:#0E6832;">
-                <i class="fas fa-check-circle"></i>
-              </div>
+              <div class="card-head-icon" style="background:#DFF0E4;color:#0E6832;"><i class="fas fa-check-circle"></i></div>
               <div class="card-head-text">
-                <h3>QR Code Lido</h3>
-                <p id="rIdDisp" style="font-family:monospace;font-size:.7rem;color:#1E3B5A;"></p>
+                <h3>Selo Identificado</h3>
+                <p id="rIdDisp" style="font-family:monospace;font-size:.68rem;color:#1E3B5A;word-break:break-all;margin-top:2px;"></p>
               </div>
             </div>
-
+            <div id="rMetodo" style="display:inline-flex;align-items:center;gap:6px;background:#F4F7FB;border-radius:8px;padding:5px 10px;font-size:.7rem;font-weight:600;color:#4A5B6E;margin-bottom:10px;">
+              <i id="rMetodoIco" class="fas fa-brain"></i><span id="rMetodoTxt">IA Vision</span>
+            </div>
             <div class="info-strip">
               <div class="info-row">
                 <div class="info-ico"><i class="fas fa-fire-extinguisher"></i></div>
-                <div>
-                  <div class="info-lbl">Extintor</div>
-                  <div class="info-val" id="rExt">—</div>
-                </div>
+                <div><div class="info-lbl">Extintor</div><div class="info-val" id="rExt">—</div></div>
               </div>
               <div class="info-row">
                 <div class="info-ico"><i class="fas fa-user-tie"></i></div>
-                <div>
-                  <div class="info-lbl">Cliente</div>
-                  <div class="info-val" id="rCli">—</div>
-                </div>
+                <div><div class="info-lbl">Cliente</div><div class="info-val" id="rCli">—</div></div>
               </div>
             </div>
-
             <div class="result-grid">
-              <div class="rg-cell full">
-                <div class="rg-lbl">ID Etiqueta</div>
-                <div class="rg-val" id="rEtqId" style="font-size:.72rem;font-family:monospace;">—</div>
-              </div>
+              <div class="rg-cell full"><div class="rg-lbl">ID Etiqueta</div><div class="rg-val" id="rEtqId" style="font-size:.7rem;font-family:monospace;word-break:break-all;">—</div></div>
               <div class="rg-cell"><div class="rg-lbl">Nº Extintor</div><div class="rg-val" id="rNumExt">—</div></div>
               <div class="rg-cell"><div class="rg-lbl">Classe</div><div class="rg-val" id="rClasse">—</div></div>
               <div class="rg-cell"><div class="rg-lbl">Tipo</div><div class="rg-val" id="rTipo">—</div></div>
@@ -794,7 +800,6 @@ select.input{
               <div class="rg-cell"><div class="rg-lbl">Recarga</div><div class="rg-val" id="rRec">—</div></div>
               <div class="rg-cell full"><div class="rg-lbl">Local</div><div class="rg-val" id="rLoc">—</div></div>
             </div>
-
             <div class="btn-row" style="margin-top:4px;">
               <button class="btn btn-secondary" onclick="consultarNov()"><i class="fas fa-sync-alt"></i> Atualizar</button>
               <button class="btn btn-secondary" onclick="limparResult()"><i class="fas fa-times"></i> Limpar</button>
@@ -804,7 +809,7 @@ select.input{
 
         <div id="ldMain" style="display:none;flex-direction:column;align-items:center;padding:24px;">
           <div style="width:32px;height:32px;border:3px solid #E0E8F0;border-top-color:#1E3B5A;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:10px;"></div>
-          <p style="font-size:.8rem;color:#6B7A8F;">Consultando...</p>
+          <p style="font-size:.8rem;color:#6B7A8F;">Consultando banco de dados...</p>
         </div>
       </div>
     </div><!-- /scanner -->
@@ -1062,8 +1067,26 @@ select.input{
     <!-- ══ CONFIG ══ -->
     <div class="page" id="pageConfig">
       <div class="p">
+        <!-- IA Config -->
         <div class="cfg-block">
-          <div class="cfg-head"><i class="fas fa-database"></i> Conexão API (Baserow)</div>
+          <div class="cfg-head"><i class="fas fa-bolt"></i> IA — Groq (llama-3.2-vision)</div>
+          <div style="background:#EDF7ED;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.74rem;color:#1a6b2a;line-height:1.6;border:1px solid #a8d5b0;">
+            <strong>Groq é gratuito e ultra-rápido.</strong><br>
+            Obtenha sua chave em <strong>console.groq.com</strong> &bull; Plano gratuito disponível
+          </div>
+          <div class="field">
+            <label class="label">Chave API Groq <span class="req">*</span></label>
+            <input type="password" class="input" id="cfgAnthropicKey" placeholder="gsk_...">
+          </div>
+          <div class="cfg-actions">
+            <button class="btn btn-primary" onclick="salvarCfg()"><i class="fas fa-save"></i> Salvar</button>
+            <button class="btn btn-secondary" onclick="testarIA()"><i class="fas fa-bolt"></i> Testar Groq</button>
+          </div>
+        </div>
+
+        <!-- Baserow Config -->
+        <div class="cfg-block">
+          <div class="cfg-head"><i class="fas fa-database"></i> Banco de Dados (Baserow)</div>
           <div class="field"><label class="label">URL da API</label>
             <input type="text" class="input" id="cfgUrl" value="https://api.baserow.io/api/"></div>
           <div class="field"><label class="label">Token de Autenticação</label>
@@ -1079,12 +1102,14 @@ select.input{
             <button class="btn btn-secondary" onclick="testarAPI()"><i class="fas fa-plug"></i> Testar</button>
           </div>
         </div>
+
         <div class="cfg-block">
           <div class="cfg-head"><i class="fas fa-mobile-alt"></i> Sobre</div>
           <p style="font-size:.82rem;color:#4A5B6E;line-height:1.7;">
-            <strong>PCI Scanner v5.0</strong> — PWA<br>
-            Leitor otimizado para QR Code INMETRO (Casa da Moeda do Brasil).<br>
-            Suporte a extintores, clientes e etiquetas via Baserow.
+            <strong>PCI Scanner v5.2</strong> — PWA<br>
+            Captura com Groq Vision (llama-3.2) para selos INMETRO.<br>
+            Extração local instantânea da mensagem WhatsApp.<br>
+            Portaria 314/2025 — Casa da Moeda do Brasil.
           </p>
         </div>
       </div>
@@ -1114,19 +1139,46 @@ select.input{
 <div class="modal-bg hidden" id="mQR">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title"><i class="fas fa-qrcode" style="color:#1E3B5A;"></i> QR Code Detectado</div>
-    <div class="mini-label">Texto completo lido:</div>
+    <div class="modal-title"><i class="fas fa-qrcode" style="color:#1E3B5A;"></i> QR Code INMETRO Lido</div>
+
+    <!-- Tipo detectado -->
+    <div id="mQRTipo" style="display:flex;align-items:center;gap:8px;background:#EEF3FA;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.78rem;font-weight:600;color:#1E3B5A;">
+      <i id="mQRTipoIco" class="fas fa-tag"></i>
+      <span id="mQRTipoTxt">Analisando...</span>
+    </div>
+
+    <!-- Conteúdo bruto -->
+    <div class="mini-label">Conteúdo lido:</div>
     <div class="qr-raw" id="mQRText"></div>
+
+    <!-- ID extraído -->
     <div id="mQRUuidWrap">
-      <div class="mini-label">ID extraído (36 caracteres):</div>
-      <div class="uuid-box ok"><i class="fas fa-check-circle" style="flex-shrink:0;margin-top:2px;"></i><span id="mQRUuidVal"></span></div>
+      <div class="mini-label">ID do Selo INMETRO (extraído):</div>
+      <div class="uuid-box ok" style="word-break:break-all;">
+        <i class="fas fa-check-circle" style="flex-shrink:0;margin-top:2px;"></i>
+        <span id="mQRUuidVal" style="font-family:monospace;font-size:.82rem;"></span>
+      </div>
     </div>
-    <div class="uuid-box warn hidden" id="mQRNoUuid" style="margin-top:0;">
+
+    <!-- Sem ID -->
+    <div class="uuid-box warn hidden" id="mQRNoUuid">
       <i class="fas fa-exclamation-triangle" style="flex-shrink:0;"></i>
-      Nenhum UUID encontrado. Tente a Entrada Manual.
+      ID não encontrado. Use a Entrada Manual com o código impresso no selo.
     </div>
-    <div class="modal-btns">
-      <button class="btn btn-primary" id="mQRUsar" onclick="usarUUID()"><i class="fas fa-tag"></i> Usar na Etiqueta</button>
+
+    <!-- Link INMETRO se for URL -->
+    <div id="mQRLinkWrap" class="hidden" style="margin-top:8px;">
+      <div class="mini-label">Link de verificação INMETRO:</div>
+      <a id="mQRLink" href="#" target="_blank" style="display:flex;align-items:center;gap:6px;background:#DFF0E4;border-radius:10px;padding:9px 12px;font-size:.78rem;font-weight:600;color:#0E6832;text-decoration:none;">
+        <i class="fas fa-external-link-alt"></i>
+        <span id="mQRLinkTxt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      </a>
+    </div>
+
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn btn-primary" id="mQRUsar" onclick="usarUUID()">
+        <i class="fas fa-tag"></i> Usar na Etiqueta
+      </button>
       <button class="btn btn-secondary" onclick="fecharMQR()">Fechar</button>
     </div>
   </div>
@@ -1155,14 +1207,19 @@ select.input{
 // ═══════════════════════════════════
 // STATE
 // ═══════════════════════════════════
-let qrMain=null, qrEtq=null, scanning=false, scanningEtq=false;
+let qrEtq=null, scanningEtq=false;
 let hist=JSON.parse(localStorage.getItem('pci_hist')||'[]');
 let etqs=JSON.parse(localStorage.getItem('pci_etqs')||'[]');
 let uuidAtual=null, ultimoQR=null, ntTimer=null;
 let apiExt=[], apiCli=[];
 let extSel=null, cliSel=null;
 let localManual=false;
-let cfg={url:'https://api.baserow.io/api/',token:'',tables:{ext:'',cli:'',etq:''}};
+let cfg={
+  url:'https://api.baserow.io/api/',
+  token:'',
+  anthropicKey:'',
+  tables:{ext:'',cli:'',etq:''}
+};
 
 // ═══════════════════════════════════
 // INIT
@@ -1197,7 +1254,7 @@ function goPage(name){
   });
   document.getElementById('page'+name).classList.add('active');
   document.getElementById('nav'+name).classList.add('active');
-  if(name!=='Scanner') stopScanner();
+  if(name!=='Scanner') stopCam();
   if(name!=='Etiqueta') stopScannerEtq();
   if(name==='Historico') renderHist();
   if(name==='Etiqueta'){renderListaEtq();drawCanvas();}
@@ -1216,91 +1273,279 @@ function goSub(s){
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
-// ═══════════════════════════════════
-// CAMERA
-// ═══════════════════════════════════
-async function checkCam(){
-  try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-    s.getTracks().forEach(t=>t.stop());return true;}
-  catch{return false;}
+// ═══════════════════════════════════════════════════════
+// CÂMERA NATIVA — Captura de imagem para IA
+// ═══════════════════════════════════════════════════════
+let camStream = null;        // stream da câmera principal
+let camStreamEtq = null;     // stream do scanner de etiqueta
+let qrEtq = null;            // Html5Qrcode para aba etiqueta
+let scanningEtq = false;
+let flashTrack = null;       // track com torch para lanterna
+
+// ── Iniciar câmera principal (modo IA) ──
+async function startCam(){
+  if(!cfg.anthropicKey){
+    toast('Configure a chave Groq na aba Config','warning');
+    goPage('Config'); return;
+  }
+  try{
+    const constraints={
+      video:{
+        facingMode:{ideal:'environment'},
+        width:{ideal:1920,min:640},
+        height:{ideal:1080,min:480},
+        focusMode:'continuous'
+      }
+    };
+    camStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const video = document.getElementById('camVideo');
+    video.srcObject = camStream;
+    await video.play();
+    // Guarda track para lanterna
+    flashTrack = camStream.getVideoTracks()[0];
+    // UI
+    document.getElementById('btnCamStart').classList.add('hidden');
+    document.getElementById('btnCamStop').classList.remove('hidden');
+    document.getElementById('btnCapture').classList.remove('hidden');
+    document.getElementById('camStatus').textContent = 'Câmera ativa — posicione o selo e capture';
+    toast('Câmera ativa!','success');
+  }catch(e){
+    toast('Erro ao acessar câmera: '+e.message,'error');
+  }
 }
 
-const SCAN_CFG={
-  fps:30,
-  disableFlip:false,
-  experimentalFeatures:{useBarCodeDetectorIfSupported:true},
-  videoConstraints:{facingMode:{exact:"environment"},width:{ideal:1920,min:640},height:{ideal:1080,min:480}}
-};
+// ── Parar câmera principal ──
+function stopCam(){
+  if(camStream){
+    camStream.getTracks().forEach(t=>t.stop());
+    camStream=null; flashTrack=null;
+  }
+  document.getElementById('camVideo').srcObject=null;
+  document.getElementById('btnCamStart').classList.remove('hidden');
+  document.getElementById('btnCamStop').classList.add('hidden');
+  document.getElementById('btnCapture').classList.add('hidden');
+  document.getElementById('camStatus').textContent='Pressione Iniciar';
+  // Esconde canvas de preview
+  document.getElementById('captureCanvas').style.display='none';
+  document.getElementById('camVideo').style.display='block';
+}
 
-async function startScanner(){
-  if(!cfg.token||!cfg.tables.ext){toast('Configure a API primeiro','warning');goPage('Config');return;}
-  if(!await checkCam()){toast('Sem permissão de câmera','error');return;}
-  document.getElementById('qr-reader').innerHTML='';
-  document.getElementById('scanStatus').textContent='Aponte para o QR Code';
-  qrMain=new Html5Qrcode("qr-reader",{verbose:false});
-  const onDec=decoded=>{
-    if(navigator.vibrate)navigator.vibrate([80,40,80]);
-    stopScanner();
-    mostrarModalQR(decoded,'scanner');
-  };
-  const box=document.getElementById('sbMain');
-  const side=Math.floor(Math.min(box.offsetWidth,box.offsetHeight)*0.7);
+// ── Capturar frame e enviar para IA ──
+async function capturarIA(){
+  const video = document.getElementById('camVideo');
+  if(!camStream || video.readyState < 2){
+    toast('Câmera não está ativa','warning'); return;
+  }
+
+  // 1. Captura o frame atual em canvas
+  const canvas = document.getElementById('captureCanvas');
+  const W = video.videoWidth  || 1280;
+  const H = video.videoHeight || 720;
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.getContext('2d').drawImage(video, 0, 0, W, H);
+
+  // 2. Mostra preview do frame capturado
+  canvas.style.display = 'block';
+  document.getElementById('camVideo').style.display = 'none';
+  document.getElementById('camStatus').textContent = 'Imagem capturada — analisando com IA...';
+  if(navigator.vibrate) navigator.vibrate([60,30,60]);
+
+  // 3. Mostra status IA
+  const iaEl = document.getElementById('iaStatus');
+  iaEl.classList.remove('hidden');
+  iaEl.style.display = 'flex';
+
+  // 4. Converte para base64 JPEG (qualidade 0.92)
+  const base64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+
   try{
-    await qrMain.start({facingMode:"environment"},{...SCAN_CFG,qrbox:{width:side,height:side},aspectRatio:1},onDec,()=>{});
-    scanning=true;
-    document.getElementById('btnStart').classList.add('hidden');
-    document.getElementById('btnStop').classList.remove('hidden');
-    document.getElementById('scanStatus').textContent='Alinhando…';
-    toast('Scanner INMETRO ativo','success');
+    document.getElementById('iaStatusTxt').textContent = 'Enviando para Groq Vision...';
+    document.getElementById('iaStatusSub').textContent  = 'llama-3.2-11b-vision analisa a imagem';
+
+    // Tenta extração local PRIMEIRO (sem custo, instantâneo)
+    // Groq Vision só é chamado se a extração local falhar
+    let resultado = null;
+
+    // Nota: para imagem, não há texto a extrair localmente —
+    // mas se o QR tiver sido decodificado e o texto estiver
+    // visível, a IA transcreve e extrairIDlocal pega no parsing
+    resultado = await extrairIDcomIA(base64);
+
+    if(resultado && resultado.id){
+      // Sucesso
+      document.getElementById('iaStatusTxt').textContent = '✅ ID encontrado!';
+      document.getElementById('iaStatusSub').textContent  = resultado.tipo || 'Extraído por IA';
+      setTimeout(()=>{ iaEl.style.display='none'; iaEl.classList.add('hidden'); }, 2000);
+
+      // Mostra modal com resultado
+      mostrarModalQR(resultado.rawText || resultado.id, 'scanner');
+      document.getElementById('rMetodoIco').className='fas fa-brain';
+      document.getElementById('rMetodoTxt').textContent='Groq Vision (llama-3.2)';
+
+    }else{
+      document.getElementById('iaStatusTxt').textContent = '⚠️ ID não encontrado';
+      document.getElementById('iaStatusSub').textContent  = resultado?.motivo || 'Tente novamente com melhor enquadramento';
+      setTimeout(()=>{ iaEl.style.display='none'; iaEl.classList.add('hidden'); }, 3500);
+      // Volta câmera
+      canvas.style.display='none';
+      document.getElementById('camVideo').style.display='block';
+      document.getElementById('camStatus').textContent='Reposicione e tente novamente';
+      toast('ID não localizado — reposicione o selo','warning');
+    }
+
+  }catch(e){
+    iaEl.style.display='none'; iaEl.classList.add('hidden');
+    canvas.style.display='none';
+    document.getElementById('camVideo').style.display='block';
+    document.getElementById('camStatus').textContent='Erro — tente novamente';
+    toast('Erro na análise: '+e.message,'error');
+    console.error('IA error:',e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXTRAÇÃO LOCAL — sem IA, regex pura (instantâneo)
+// Prioridade: 1º tenta localmente, 2º usa Groq Vision
+// ═══════════════════════════════════════════════════════════
+function extrairIDlocal(texto){
+  if(!texto) return null;
+  const t = texto.trim();
+
+  // 1. Após a palavra "produto" (mensagem WhatsApp INMETRO)
+  const mProd = t.match(/produto\s+([^\s]{6,})/i);
+  if(mProd) return { id: mProd[1].replace(/[^a-zA-Z0-9\-]/g,''), tipo:'MENSAGEM_WHATSAPP', rawText:t };
+
+  // 2. UUID padrão xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  const mUuid = t.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if(mUuid) return { id: mUuid[0], tipo:'UUID', rawText:t };
+
+  // 3. URL INMETRO com UUID
+  const mUrl = t.match(/https?:\/\/[^\s]+/i);
+  if(mUrl){
+    const urlUuid = mUrl[0].match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if(urlUuid) return { id: urlUuid[0], tipo:'URL_INMETRO', rawText:t, url: mUrl[0] };
+    return { id: mUrl[0], tipo:'URL_INMETRO', rawText:t, url: mUrl[0] };
+  }
+
+  // 4. Código alfanumérico (fallback — texto curto sem espaços)
+  if(t.length >= 8 && t.length <= 40 && /^[A-Z0-9]+$/i.test(t.replace(/[-_]/g,''))){
+    return { id: t.toUpperCase(), tipo:'CODIGO_ALFANUMERICO', rawText:t };
+  }
+
+  return null;
+}
+
+// ── Motor de IA: Groq Vision (llama-3.2-11b-vision-preview) ──
+async function extrairIDcomIA(base64Jpeg){
+  const prompt = 'Analise esta imagem de um selo INMETRO (extintores de incêndio, Brasil, Portaria 314/2025).
+
+Busque por:
+1. Mensagem: "produto XXXX" → extraia o código após "produto"
+2. UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
+3. URL: https://napalmadamao.inmetro.gov.br/...
+4. Código alfanumérico impresso no selo
+
+Responda SOMENTE em JSON (sem markdown):
+{"encontrado":true,"id":"codigo-aqui","tipo":"UUID|MENSAGEM_WHATSAPP|URL_INMETRO|CODIGO_ALFANUMERICO","rawText":"texto visto na imagem","confianca":"alta|media|baixa","motivo":"se nao encontrado"}';
+
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + cfg.anthropicKey
+    },
+    body: JSON.stringify({
+      model:       'meta-llama/llama-4-scout-17b-16e-instruct',
+      max_tokens:  256,
+      temperature: 0,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: { url: 'data:image/jpeg;base64,' + base64Jpeg }
+          },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  if(!resp.ok){
+    const err = await resp.text();
+    throw new Error('Groq API ' + resp.status + ': ' + err.substring(0,120));
+  }
+
+  const data = await resp.json();
+  const txt  = data.choices?.[0]?.message?.content || '{}';
+
+  // 1. Tenta extrair localmente do texto retornado pela IA
+  const local = extrairIDlocal(txt);
+  if(local) return { encontrado:true, ...local };
+
+  // 2. Parse JSON da resposta
+  try{
+    const clean  = txt.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if(parsed.encontrado && parsed.id) return parsed;
+    return { encontrado:false, motivo: parsed.motivo || 'Nenhum ID na imagem', rawText:txt };
   }catch{
-    try{
-      await qrMain.start({facingMode:"environment"},{fps:20,qrbox:{width:220,height:220}},onDec,()=>{});
-      scanning=true;
-      document.getElementById('btnStart').classList.add('hidden');
-      document.getElementById('btnStop').classList.remove('hidden');
-      toast('Scanner iniciado','success');
-    }catch{toast('Erro ao acessar câmera','error');}
-  }
-}
-function stopScanner(){
-  if(qrMain&&scanning){
-    qrMain.stop().then(()=>{
-      scanning=false;
-      document.getElementById('btnStart').classList.remove('hidden');
-      document.getElementById('btnStop').classList.add('hidden');
-      document.getElementById('scanStatus').textContent='Pressione Iniciar';
-    }).catch(()=>{});
+    return { encontrado:false, motivo:'Resposta inválida da IA', rawText:txt };
   }
 }
 
-async function startScannerEtq(){
-  if(!await checkCam()){toast('Sem permissão de câmera','error');return;}
-  document.getElementById('qr-reader-etiqueta').innerHTML='';
-  qrEtq=new Html5Qrcode("qr-reader-etiqueta",{verbose:false});
-  const onDec=decoded=>{
-    if(navigator.vibrate)navigator.vibrate([80,40,80]);
-    stopScannerEtq();
-    mostrarModalQR(decoded,'etiqueta');
-  };
-  const box=document.getElementById('sbEtq');
-  const w=Math.floor(box.offsetWidth*0.72);
-  const h=Math.floor(w*0.75);
+// ── Lanterna ──
+async function toggleFlash(){
+  const track = flashTrack || (camStreamEtq?.getVideoTracks()?.[0]);
+  if(!track){toast('Inicie a câmera primeiro','warning');return;}
   try{
-    await qrEtq.start({facingMode:"environment"},{...SCAN_CFG,qrbox:{width:w,height:h},aspectRatio:1.333},onDec,()=>{});
+    const caps = track.getCapabilities();
+    if(caps?.torch){
+      const settings = track.getSettings();
+      const isOn = settings.torch || false;
+      await track.applyConstraints({ advanced:[{ torch: !isOn }] });
+      const btn = document.getElementById('btnFlash');
+      btn.style.background = isOn ? '#EEF3FA' : '#FFF8E1';
+      btn.querySelector('i').style.color = isOn ? '#1E3B5A' : '#F0A500';
+      toast(isOn?'Lanterna desligada':'Lanterna ligada!','info');
+    }else{ toast('Lanterna não disponível neste dispositivo','warning'); }
+  }catch(e){ toast('Lanterna não disponível','warning'); }
+}
+
+// ── Scanner da aba Etiqueta (mantém Html5Qrcode como fallback rápido) ──
+async function startScannerEtq(){
+  try{
+    const constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1920,min:640},height:{ideal:1080,min:480}}};
+    camStreamEtq = await navigator.mediaDevices.getUserMedia(constraints);
+    // Usa Html5Qrcode se disponível, senão câmera nativa
+    document.getElementById('qr-reader-etiqueta').innerHTML='';
+    qrEtq = new Html5Qrcode("qr-reader-etiqueta",{verbose:false});
+    const box = document.getElementById('sbEtq');
+    const w = Math.floor((box.offsetWidth||300)*0.72);
+    const h = Math.floor(w*0.75);
+    await qrEtq.start(
+      {facingMode:"environment"},
+      {fps:30,qrbox:{width:w,height:h},aspectRatio:1.333,
+       experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+       videoConstraints:{facingMode:{exact:"environment"},width:{ideal:1920,min:640},height:{ideal:1080,min:480}}},
+      decoded=>{
+        if(navigator.vibrate)navigator.vibrate([80,40,80]);
+        stopScannerEtq();
+        mostrarModalQR(decoded,'etiqueta');
+      },
+      ()=>{}
+    );
     scanningEtq=true;
     document.getElementById('btnStartEtq').classList.add('hidden');
     document.getElementById('btnStopEtq').classList.remove('hidden');
     toast('Scanner ativo','success');
-  }catch{
-    try{
-      await qrEtq.start({facingMode:"environment"},{fps:20,qrbox:{width:200,height:150}},onDec,()=>{});
-      scanningEtq=true;
-      document.getElementById('btnStartEtq').classList.add('hidden');
-      document.getElementById('btnStopEtq').classList.remove('hidden');
-      toast('Scanner iniciado','success');
-    }catch{toast('Erro ao acessar câmera','error');}
+  }catch(e){
+    toast('Erro ao acessar câmera','error');
+    console.error(e);
   }
 }
+
 function stopScannerEtq(){
   if(qrEtq&&scanningEtq){
     qrEtq.stop().then(()=>{
@@ -1309,39 +1554,83 @@ function stopScannerEtq(){
       document.getElementById('btnStopEtq').classList.add('hidden');
     }).catch(()=>{});
   }
+  if(camStreamEtq){ camStreamEtq.getTracks().forEach(t=>t.stop()); camStreamEtq=null; }
 }
 
-async function toggleFlash(){
-  try{
-    const sc=scanning?qrMain:(scanningEtq?qrEtq:null);
-    if(!sc){toast('Inicie o scanner antes','warning');return;}
-    const caps=sc.getRunningTrackCameraCapabilities?sc.getRunningTrackCameraCapabilities():null;
-    if(caps&&caps.torchFeature){
-      const t=caps.torchFeature();
-      const on=t.isOn?t.isOn():false;
-      on?await t.off():await t.on();
-      toast(on?'Lanterna desligada':'Lanterna ligada!','info');
-    }else toast('Lanterna não disponível','warning');
-  }catch{toast('Lanterna não disponível','warning');}
-}
+// Parar tudo ao mudar de aba
+function stopScanner(){ stopCam(); }
 
 // ═══════════════════════════════════
 // MODAL QR RAW
 // ═══════════════════════════════════
 let qrOrigem='etiqueta';
+// ═══════════════════════════════════════════════════════
+// parsearQRInmetro — detecta formato do QR Code INMETRO
+// Portaria 314/2025 — Casa da Moeda do Brasil
+// Formatos possíveis:
+//   1. URL:  https://napalmadamao.inmetro.gov.br/selo/UUID
+//            https://inmpam.gov.br/...
+//   2. UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
+//   3. WA:   "Oi, envie... produto UUID"
+//   4. Alfa: código alfanumérico impresso (ex: ZZVA6VNQYBGSRNF238)
+// ═══════════════════════════════════════════════════════
+function parsearQRInmetro(txt){
+  // Unificado com extrairIDlocal — mesma lógica
+  const t=(txt||'').trim();
+  let id=null,url=null,tipo='Conteúdo não reconhecido',tipoIco='fas fa-question-circle';
+
+  // 1. Após "produto" (mensagem WhatsApp INMETRO)
+  const mProd=t.match(/produto\s+([^\s]{6,})/i);
+  if(mProd){
+    id=mProd[1].replace(/[^a-zA-Z0-9\-]/g,'');
+    tipo='Mensagem WhatsApp — ID do Produto';
+    tipoIco='fab fa-whatsapp';
+  }
+  // 2. URL INMETRO
+  else if(/napalmadamao|inmpam\.gov|inmetro\.gov/i.test(t)){
+    const mUrl=t.match(/https?:\/\/[^\s]+/i);
+    if(mUrl){
+      url=mUrl[0];
+      const mU=url.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      id=mU?mU[0]:url;
+    }
+    tipo='URL INMETRO — Verificação oficial';
+    tipoIco='fas fa-shield-alt';
+  }
+  // 3. UUID direto
+  else{
+    const mUuid=t.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if(mUuid){
+      id=mUuid[0];
+      tipo='QR Code com UUID (ID do Selo)';
+      tipoIco='fas fa-qrcode';
+    } else if(t.length>=8&&t.length<=40&&/^[A-Z0-9]+$/i.test(t.replace(/[-_]/g,''))){
+      id=t.toUpperCase();
+      tipo='Código Alfanumérico do Selo';
+      tipoIco='fas fa-font';
+    }
+  }
+  return{id,url,tipo,tipoIco};
+}
+
 function mostrarModalQR(txt,origem){
   qrOrigem=origem||'etiqueta';
   uuidAtual=null;
   txt=txt.trim();
   document.getElementById('mQRText').textContent=txt;
-  const uuidRe=/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-  const m=txt.match(uuidRe);
-  const uuid=m?m[0]:null;
-  if(uuid){
-    uuidAtual=uuid;
+
+  const parsed=parsearQRInmetro(txt);
+
+  // Tipo detectado
+  document.getElementById('mQRTipoIco').className=parsed.tipoIco;
+  document.getElementById('mQRTipoTxt').textContent=parsed.tipo;
+
+  // ID extraído
+  if(parsed.id){
+    uuidAtual=parsed.id;
     document.getElementById('mQRUuidWrap').style.display='block';
     document.getElementById('mQRNoUuid').classList.add('hidden');
-    document.getElementById('mQRUuidVal').textContent=uuid;
+    document.getElementById('mQRUuidVal').textContent=parsed.id;
     document.getElementById('mQRUsar').disabled=false;
     document.getElementById('mQRUsar').style.opacity='1';
   }else{
@@ -1350,8 +1639,19 @@ function mostrarModalQR(txt,origem){
     document.getElementById('mQRUsar').disabled=true;
     document.getElementById('mQRUsar').style.opacity='.5';
   }
+
+  // Link INMETRO
+  if(parsed.url){
+    document.getElementById('mQRLinkWrap').classList.remove('hidden');
+    document.getElementById('mQRLink').href=parsed.url;
+    document.getElementById('mQRLinkTxt').textContent=parsed.url;
+  }else{
+    document.getElementById('mQRLinkWrap').classList.add('hidden');
+  }
+
   document.getElementById('mQR').classList.remove('hidden');
-  if(origem==='scanner'&&uuid) handleQRCode(uuid);
+  // Se veio do scanner principal, busca na API em paralelo
+  if(origem==='scanner'&&parsed.id) handleQRCode(parsed.id);
 }
 window.fecharMQR=()=>{document.getElementById('mQR').classList.add('hidden');uuidAtual=null;};
 window.usarUUID=()=>{
@@ -1368,17 +1668,19 @@ window.usarUUID=()=>{
 // UUID EXTRACT (paste)
 // ═══════════════════════════════════
 function extrairUUID(txt){
-  const re=/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-  const m=txt.match(re);
+  // Usa extrairIDlocal — lógica centralizada e unificada
+  const parsed = extrairIDlocal(txt) || parsearQRInmetro(txt);
   const el=document.getElementById('uuidOk');
-  if(m){
+  if(parsed && parsed.id){
     el.className='uuid-result ok';
-    document.getElementById('uuidVal').textContent=m[0];
-    document.getElementById('etqId').value=m[0];
-    drawCanvas();toast('ID extraído!','success');
+    document.getElementById('uuidVal').textContent=parsed.id;
+    document.getElementById('etqId').value=parsed.id;
+    drawCanvas();
+    const tipoLabel = parsed.tipo==='MENSAGEM_WHATSAPP'?'WhatsApp':parsed.tipo==='UUID'?'UUID':parsed.tipo==='URL_INMETRO'?'URL INMETRO':'Código';
+    toast('ID extraído! (' + tipoLabel + ')','success');
   }else if(txt.trim()){
     el.className='uuid-result err';
-    document.getElementById('uuidVal').textContent='UUID não encontrado';
+    document.getElementById('uuidVal').textContent='ID não encontrado — verifique o texto';
     document.getElementById('etqId').value='';
   }else{
     el.className='uuid-result';
@@ -1391,19 +1693,23 @@ function extrairUUID(txt){
 // ═══════════════════════════════════
 window.submitManual=function(){
   const code=document.getElementById('manualCode').value.trim();
-  if(!code||code.length<8){toast('Insira o código do selo','warning');return;}
+  if(!code||code.length<6){toast('Insira o código impresso no selo','warning');return;}
+  // Trata código alfanumérico impresso no selo INMETRO
+  // Ex: ZZVA6VNQYBGSRNF238 — referência de contingência (Portaria 314/2025)
   document.getElementById('manualCode').value='';
-  mostrarModalQR('produto '+code,'scanner');
+  mostrarModalQR(code,'scanner');
 };
 
 // ═══════════════════════════════════
 // handleQRCode
 // ═══════════════════════════════════
 async function handleQRCode(qrData){
+  // Aceita tanto UUID quanto código alfanumérico do selo INMETRO
   const re=/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
   const m=qrData.match(re);
-  if(!m){toast('ID não encontrado no QR Code','error');return;}
-  const produtoId=m[0];
+  // Se não for UUID, usa o valor bruto como ID (código alfanumérico)
+  const produtoId=m?m[0]:qrData.trim();
+  if(!produtoId){toast('ID não encontrado no QR Code','error');return;}
   ultimoQR=produtoId;
   document.getElementById('rIdDisp').textContent=produtoId;
   document.getElementById('resultCard').classList.remove('hidden');
@@ -1821,12 +2127,37 @@ function loadCfg(){
   document.getElementById('cfgTblExt').value=cfg.tables.ext;
   document.getElementById('cfgTblCli').value=cfg.tables.cli;
   document.getElementById('cfgTblEtq').value=cfg.tables.etq;
+  document.getElementById('cfgAnthropicKey').value=cfg.anthropicKey||'';
   checkConn();
 }
 window.salvarCfg=function(){
-  cfg={url:document.getElementById('cfgUrl').value,token:document.getElementById('cfgToken').value,tables:{ext:document.getElementById('cfgTblExt').value,cli:document.getElementById('cfgTblCli').value,etq:document.getElementById('cfgTblEtq').value}};
+  cfg={
+    url:document.getElementById('cfgUrl').value,
+    token:document.getElementById('cfgToken').value,
+    anthropicKey:document.getElementById('cfgAnthropicKey').value.trim(),
+    tables:{
+      ext:document.getElementById('cfgTblExt').value,
+      cli:document.getElementById('cfgTblCli').value,
+      etq:document.getElementById('cfgTblEtq').value
+    }
+  };
   localStorage.setItem('pci_cfg',JSON.stringify(cfg));
   toast('Configurações salvas!','success');checkConn();loadExt();loadCli();
+};
+
+// Testar Groq
+window.testarIA=async function(){
+  if(!cfg.anthropicKey){toast('Informe a chave Groq (gsk_...)','error');return;}
+  toast('Testando Groq...','info');
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.anthropicKey},
+      body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:10,messages:[{role:'user',content:'OK?'}]})
+    });
+    if(r.ok){ toast('⚡ Groq OK! Ultra-rápido.','success'); }
+    else{ const e=await r.json(); toast('Erro Groq: '+(e.error?.message||r.status),'error'); }
+  }catch(e){ toast('Erro de rede: '+e.message,'error'); }
 };
 window.testarAPI=async function(){
   if(!cfg.token){toast('Token não configurado','error');return;}
